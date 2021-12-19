@@ -174,11 +174,11 @@ listpoolshares {"limit":100000}
 #spv_dumpprivkey "address"
 #spv_estimateanchorcost ( feerate )
 #spv_getaddresspubkey "address"
-spv_getalladdresses
+#spv_getalladdresses
 spv_getbalance
 spv_getfeerate
 #spv_gethtlcseed "address"
-spv_getnewaddress
+#spv_getnewaddress
 spv_getpeers
 #spv_getrawtransaction "txid"
 #spv_gettxconfirmations "txhash"
