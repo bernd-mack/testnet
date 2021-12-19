@@ -1,4 +1,5 @@
 from os import path, makedirs, listdir
+from subprocess import check_output
 from json import JSONEncoder, dumps
 from logging import basicConfig, info, INFO
 from decimal import Decimal
@@ -6,6 +7,7 @@ from bitcoinrpc.authproxy import AuthServiceProxy
 from socket import gethostbyname, gethostname
 from psutil import virtual_memory, cpu_percent, cpu_freq, net_io_counters, cpu_count, disk_usage, disk_partitions
 import shutil
+import credentials
 
 # psutil, shutil, python-bitcoinrpc, requests nicht Standardinstallation
 
@@ -102,6 +104,11 @@ def get_systeminfo():
     print (stats_data)
     return stats_data
 
+def get_version(file):
+    version = check_output([file, '--version'], encoding='UTF-8').split("\n")[0]
+    print (version)
+    return version
+
 # variables
 filename = path.basename(__file__)
 directory = path.dirname(__file__)
@@ -109,9 +116,10 @@ logfile = path.dirname(__file__)+"/"+filename.split(".")[0]+".log"
 
 API_INDEX_PHP = "<?PHP header('Content-Type: application/json');\n\n$data = file_get_contents('data.json');\n\necho $data;\n\n?>"
 GLOBAL_INDEX_PHP = "<!DOCTYPE html>\n<html>\n<body>\n<?PHP\n$verzeichnis = '.';\n$verz_inhalt = scandir($verzeichnis);\nforeach ($verz_inhalt as $folder) {\n    if (is_dir($folder)){\n        echo '<a href=\"'.$folder.'/\">'.$folder.'</a><br>';\n    }\n}\n?>\n</body>\n</html>"
-WWW_DIR = "c:/temp/api/collector/www"
-API_LIST = "c:/Temp/api_collector/api_calls.txt"
-DEFICONF = "c:/users/bmack/.defi/defi.conf"
+WWW_DIR = credentials.WWW_DIR
+API_LIST = credentials.API_LIST
+DEFICONF = credentials.DEFICONF
+DEFID = credentials.DEFID
 
 # program start
 basicConfig(filename=logfile, format='%(asctime)s - %(message)s', level=INFO)
@@ -121,6 +129,7 @@ info(f"Start {filename}")
 errors = []
 
 save_json_to_www(WWW_DIR, "systeminfo", get_systeminfo())
+save_json_to_www(WWW_DIR, "version", get_version (DEFID))
 
 rpc_connection = create_connection_rpc(read_deficonf(DEFICONF))
 
@@ -157,7 +166,7 @@ except Exception as e:
     servername = None
     ip_address = None
 
-print(f'removed directorys: {remove_unused_dirs(WWW_DIR, functions.keys() | {"systeminfo"})}')
+print(f'removed directorys: {remove_unused_dirs(WWW_DIR, functions.keys() | {"systeminfo","version"})}')
 
 if (errors):
     text = f"Problems with {filename} on {servername} {ip_address}\n{errors}"
