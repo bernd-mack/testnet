@@ -1,10 +1,11 @@
 from os import path
+from requests import get
 from logging import basicConfig, info, INFO
-from credentials import WWW_DIR, DEFID, DEFICONF, API_LIST
+from credentials import WWW_DIR, DEFID, DEFICONF, API_LIST, TELEGRAM_TOKEN, TELEGRAM_CHATID_ALARM
 from subfunctions import save_json_to_www, create_connection_rpc, get_systeminfo, get_version
 from subfunctions import read_deficonf, remove_unused_dirs, api_calls, get_operators, get_servername
 
-# psutil, shutil, python-bitcoinrpc, requests nicht Standardinstallation
+# hint: psutil, shutil, python-bitcoinrpc, requests nicht Standardinstallation
 
 # variables
 filename = path.basename(__file__)
@@ -19,7 +20,7 @@ info(f"Start {filename}")
 errors = []
 
 #TODO put a try, except around the special functions or direct in the subfunctions
-KEEP_DIRECTORYS = ["systeminfo","version","operatoraddresses"]
+KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes"]
 save_json_to_www(WWW_DIR, "systeminfo",        get_systeminfo())
 save_json_to_www(WWW_DIR, "version",           get_version(DEFID))
 save_json_to_www(WWW_DIR, "operatoraddresses", get_operators(DEFICONF))
@@ -53,10 +54,12 @@ if functions:
 servername, ip_address = get_servername()
 
 print(f'removed directorys: {remove_unused_dirs(WWW_DIR, list(functions.keys()) + KEEP_DIRECTORYS)}')
+info(f'removed directorys: {remove_unused_dirs(WWW_DIR, list(functions.keys()) + KEEP_DIRECTORYS)}')
 
 if errors:
     text = f"Problems with {filename} on {servername} {ip_address}\n{errors}"
     print (text)
     info (text)
+    get(f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHATID_ALARM}&text={text}')
 
 info(f"End {filename}")
