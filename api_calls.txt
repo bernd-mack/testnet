@@ -76,7 +76,7 @@ icx_listorders
 getloaninfo
 #getloanscheme "id"
 #getloantoken "token"
-listcollateraltokens {"all":True}
+listcollateraltokens
 listloanschemes
 listloantokens
 #paybackloan {"vaultId":"hex","from":"str","amounts":"str"} ( [{"txid":"hex","vout":n},...] )
@@ -94,7 +94,7 @@ getanchorteams
 #getmasternode "mn_id"
 #getmasternodeblocks ( {"id":"hex","ownerAddress":"str","operatorAddress":"str"} depth )
 listanchors
-listmasternodes {"limit":100000}
+#listmasternodes {"limit":100000}
 #resignmasternode "mn_id" ( [{"txid":"hex","vout":n},...] )
 
 == Mining ==
