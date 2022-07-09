@@ -20,7 +20,7 @@ info(f"Start {filename}")
 errors = []
 
 #TODO put a try, except around the special functions or direct in the subfunctions
-KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes", "vaultaggregation"]
+KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes", "vaultaggregation", "statistics"]
 save_json_to_www(WWW_DIR, "systeminfo",        get_systeminfo())
 save_json_to_www(WWW_DIR, "version",           get_version(DEFID))
 save_json_to_www(WWW_DIR, "operatoraddresses", get_operators(DEFICONF))
