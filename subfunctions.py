@@ -8,7 +8,8 @@ import shutil
 from bitcoinrpc.authproxy import AuthServiceProxy
 from psutil import virtual_memory, cpu_percent, cpu_freq, net_io_counters
 from psutil import cpu_count, disk_usage, disk_partitions
-
+from requests import get
+from requests.auth import HTTPBasicAuth
 
 API_INDEX_PHP = "<?PHP header('Content-Type: application/json');\n"\
                 "\n$data = file_get_contents('data.json');\n"\
@@ -67,7 +68,7 @@ def get_operators(filename):
     file = open(filename,'r')
     regex_pattern = r'masternode_operator\s*=\s*([A-HJ-NP-Za-km-z1-9]{34})'
     operatorlist = re.findall(regex_pattern, file.read())
-    print (operatorlist)
+    #print (operatorlist)
     return operatorlist
 
 def get_systeminfo():
@@ -131,3 +132,44 @@ def remove_unused_dirs(folder, keep_dir):
                 else:
                     print(f"The directory {file} is deleted successfully")
     return deleted
+
+def get_serverlist_txt(filename):
+    returnvalue = []
+    with open(filename) as f:
+        for i in f.read().split('\n'):
+            infos = i.split(" ")
+            
+            if   len(infos) >= 3:
+                returnvalue.append({"host": infos[0], "user": infos[1], "pwd": infos[2]})
+            elif len(infos) == 2:
+                returnvalue.append({"host": infos[0], "user": infos[1], "pwd": False})
+            elif len(infos) == 1:
+                returnvalue.append({"host": infos[0], "user": False,    "pwd": False})
+    return returnvalue
+
+def get_mininginfo(server, errorlist):
+    try:
+        response = get(server["host"]+"getmininginfo", auth=HTTPBasicAuth(server["user"], server["pwd"]))
+        if response.status_code == 200:
+            return response.json()
+        else:
+            errorlist.append(server)
+            return {}
+    except Exception as err:
+        errorlist.append(server)
+        return {}
+
+def get_operatorlist_txt(filename):
+    returnvalue = []
+    with open(filename) as f:
+        for i in f.read().split('\n'):
+            returnvalue.append(i)
+    return returnvalue
+
+def add_operator_to_list(file, operator):
+    fileobject = open(file, 'a')
+    fileobject.write(operator+"\n")
+    fileobject.close()
+
+def zerodivision(n, d):
+    return n / d if d else 0
