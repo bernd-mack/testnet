@@ -5,7 +5,7 @@ from credentials import WWW_DIR, DEFID, DEFICONF, API_LIST, TELEGRAM_TOKEN, TELE
 from subfunctions import save_json_to_www, create_connection_rpc, get_systeminfo, get_version
 from subfunctions import read_deficonf, remove_unused_dirs, api_calls, get_operators, get_servername
 
-# hint: psutil, shutil, python-bitcoinrpc, requests nicht Standardinstallation
+# hint: psutil, shutil, python-bitcoinrpc, requests not a standard python lib
 
 # variables
 filename = path.basename(__file__)
@@ -20,7 +20,7 @@ info(f"Start {filename}")
 errors = []
 
 #TODO put a try, except around the special functions or direct in the subfunctions
-KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes"]
+KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes", "vaultaggregation"]
 save_json_to_www(WWW_DIR, "systeminfo",        get_systeminfo())
 save_json_to_www(WWW_DIR, "version",           get_version(DEFID))
 save_json_to_www(WWW_DIR, "operatoraddresses", get_operators(DEFICONF))
