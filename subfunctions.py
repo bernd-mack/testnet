@@ -1,5 +1,5 @@
 import platform
-from os import path, makedirs, listdir
+from os import path, makedirs, listdir, scandir
 import re
 from json import JSONEncoder, dumps
 from socket import gethostbyname, gethostname
@@ -54,7 +54,7 @@ def get_operators(filename):
     operatorlist = re.findall(regex_pattern, file.read())
     return operatorlist
 
-def get_systeminfo():
+def get_systeminfo(folder = False):
     stats_data = {"disk_total": 0, "disk_used": 0, "disk_free": 0}
     partitions = disk_partitions()
     for i in enumerate(partitions):
@@ -91,6 +91,8 @@ def get_systeminfo():
     except:
         pass
 
+    if folder:
+        stats_data["chainsize"] = get_dir_size(folder)
     print (stats_data)
     return stats_data
 
@@ -108,6 +110,15 @@ def get_servername():
     except Exception:
         return "",""
 
+def get_dir_size(path='.'):
+    total = 0
+    with scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    return total
 
 def api_calls(filename):
     returnvalue = {}
