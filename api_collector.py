@@ -1,7 +1,7 @@
 from os import path
 from logging import basicConfig, info, INFO
 from requests import post, get
-from credentials import WWW_DIR, DEFID, DEFICONF, API_LIST, TELEGRAM_TOKEN, TELEGRAM_CHATID_ALARM, TELEGRAM_CHATID_STATUS, NETWORK
+from credentials import WWW_DIR, DEFID, DATA_DIR, DEFICONF, API_LIST, TELEGRAM_TOKEN, TELEGRAM_CHATID_ALARM, TELEGRAM_CHATID_STATUS, NETWORK
 from subfunctions import save_json_to_www, get_systeminfo, get_version, get_credentials_from_config
 from subfunctions import remove_unused_dirs, api_calls, get_operators, get_servername
 from json import dumps
@@ -43,7 +43,7 @@ errors = False
 
 #TODO put a try, except around the special functions or direct in the subfunctions
 KEEP_DIRECTORYS = ["systeminfo", "version", "operatoraddresses", "listmasternodes", "vaultaggregation", "statistics", "statistics_v2", "rpc_status", "getblockcountevm", "rpc_status"]
-save_json_to_www(WWW_DIR, "systeminfo",        get_systeminfo())
+save_json_to_www(WWW_DIR, "systeminfo",        get_systeminfo(DATA_DIR))
 save_json_to_www(WWW_DIR, "version",           get_version(DEFID))
 save_json_to_www(WWW_DIR, "operatoraddresses", get_operators(DEFICONF))
 save_json_to_www(WWW_DIR, "getblockcountevm",  get_vmmap())
