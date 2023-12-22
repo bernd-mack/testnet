@@ -1,5 +1,6 @@
 from os import path
 from logging import basicConfig, info, INFO
+from requests import post
 from credentials import WWW_DIR, DEFID, DEFICONF, API_LIST, TELEGRAM_TOKEN, TELEGRAM_CHATID_ALARM, TELEGRAM_CHATID_STATUS, NETWORK
 from subfunctions import save_json_to_www, get_systeminfo, get_version, get_credentials_from_config
 from subfunctions import remove_unused_dirs, api_calls, get_operators, get_servername
