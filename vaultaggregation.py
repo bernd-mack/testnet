@@ -47,7 +47,8 @@ try:
     vaultlist = rpc("listvaults", [{}, {"limit":100000}])
     info(f"Anzahl Vaults: {len(vaultlist)}")
 
-    for i in vaultlist:
+    for cnt, i in enumerate(vaultlist):
+        print(f"{cnt:5} / {len(vaultlist)}",end="\r")
         vault = rpc("getvault", [i["vaultId"]])
         if "state" in vault:
             if vault["state"] == "active":
@@ -79,6 +80,7 @@ try:
                         amount, token = batch["loan"].split("@")
                         if token in data[1]["loanAmounts"]: data[1]["loanAmounts"][token] += Decimal(amount)
                         else: data[1]["loanAmounts"][token] = Decimal(amount)
+    print(" ")
 
     info (data)
     print (data)
