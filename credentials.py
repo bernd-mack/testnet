@@ -2,6 +2,7 @@ WWW_DIR  = "c:/api_collector/www"
 API_LIST = "c:/api_collector/api_calls.txt"
 DEFICONF = "c:/users/username/.defi/defi.conf"
 DEFID    = "C:/Program Files/DeFi Wallet/resources/binary/win/defid.exe"
+DATA_DIR = "C:/users/username/AppData/Roaming/DeFi Blockchain"
 NETWORK  = "main"
 
 TELEGRAM_TOKEN           = "bottoken" #request from telegram botfather
