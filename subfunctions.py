@@ -85,6 +85,12 @@ def get_systeminfo():
     stats_data["osVersion"] = platform.uname().release
     stats_data["osArch"] = platform.uname().machine
 
+    stats_data["python"] = ".".join(platform.python_version_tuple())
+    try:
+        stats_data["distri"] = platform.freedesktop_os_release()["PRETTY_NAME"]
+    except:
+        pass
+
     print (stats_data)
     return stats_data
 
