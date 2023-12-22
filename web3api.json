@@ -1,0 +1,24 @@
+[
+    {
+        "url": "https://dmc.mydefichain.com/changi",
+        "network": "changi",
+        "name": "mydefichain RPC changi Test",
+        "logo": "logo_mydefichain.jpg",
+        "hide_url": false
+    },
+    {
+        "url": "https://dmc.mydefichain.com/testnet",
+        "network": "testnet3",
+        "name": "mydefichain RPC Testnet",
+        "logo": "logo_mydefichain.jpg",
+        "hide_url": false
+    },
+    {
+        "url": "https://dmc.mydefichain.com/mainnet",
+        "network": "mainnet",
+        "name": "mydefichain RPC Mainnet",
+        "logo": "logo_mydefichain.jpg",
+        "hide_url": false
+    },
+]
+
