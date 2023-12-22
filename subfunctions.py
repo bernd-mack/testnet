@@ -1,3 +1,4 @@
+import platform
 from os import path, makedirs, listdir
 import re
 from json import JSONEncoder, dumps
@@ -5,11 +6,12 @@ from socket import gethostbyname, gethostname
 from decimal import Decimal
 from subprocess import check_output
 import shutil
-from bitcoinrpc.authproxy import AuthServiceProxy
-from psutil import virtual_memory, cpu_percent, cpu_freq, net_io_counters
-from psutil import cpu_count, disk_usage, disk_partitions
-from requests import get
+from psutil import virtual_memory, cpu_percent, cpu_freq, net_io_counters  #pip install psutil
+from psutil import cpu_count, disk_usage, disk_partitions #pip install psutil
+from requests import get #pip install requests
 from requests.auth import HTTPBasicAuth
+from collections import OrderedDict
+import configparser
 
 API_INDEX_PHP = "<?PHP header('Content-Type: application/json');\n"\
                 "\n$data = file_get_contents('data.json');\n"\
@@ -24,24 +26,6 @@ class DecimalEncoder (JSONEncoder):
         if isinstance (obj, Decimal):
             return float (obj)
         return JSONEncoder.default (self, obj)
-
-def read_deficonf(filename):
-    returnvalue = {}
-    with open(filename) as file:
-        for line in file.read().split('\n'):
-            if line.startswith("rpcuser"):
-                returnvalue["rpcuser"]     = line.split("=")[1].strip(" ")
-            elif line.startswith("rpcpassword"):
-                returnvalue["rpcpassword"] = line.split("=")[1].strip(" ")
-            elif line.startswith("rpcport"):
-                returnvalue["rpcport"]     = line.split("=")[1].strip(" ")
-            elif line.startswith("rpcbind"):
-                returnvalue["rpcbind"]     = line.split("=")[1].strip(" ")
-    return returnvalue
-
-def create_connection_rpc(secrets):
-    url = "http://%s:%s@%s:%s/"%(secrets["rpcuser"], secrets["rpcpassword"], secrets["rpcbind"], secrets["rpcport"])
-    return AuthServiceProxy(url)
 
 def save_json_to_www(folder, subfolder, data):
     if not path.exists(folder+"/"+subfolder):
@@ -68,7 +52,6 @@ def get_operators(filename):
     file = open(filename,'r')
     regex_pattern = r'masternode_operator\s*=\s*([A-HJ-NP-Za-km-z1-9]{34})'
     operatorlist = re.findall(regex_pattern, file.read())
-    #print (operatorlist)
     return operatorlist
 
 def get_systeminfo():
@@ -91,6 +74,17 @@ def get_systeminfo():
     stats_data["memory_total"] = virtual_memory().total
     stats_data["memory_used"]  = virtual_memory().used
     stats_data["memory_free"]  = virtual_memory().free
+
+    pName = platform.uname().system
+
+    if "darwin" in pName.lower():
+        pName = "macOS"
+
+    # System Informationen
+    stats_data["os"] = pName
+    stats_data["osVersion"] = platform.uname().release
+    stats_data["osArch"] = platform.uname().machine
+
     print (stats_data)
     return stats_data
 
@@ -143,7 +137,7 @@ def get_serverlist_txt(filename):
                 returnvalue.append({"host": infos[0], "user": infos[1], "pwd": infos[2]})
             elif len(infos) == 2:
                 returnvalue.append({"host": infos[0], "user": infos[1], "pwd": False})
-            elif len(infos) == 1:
+            elif len(infos) == 1 and infos[0] != "":
                 returnvalue.append({"host": infos[0], "user": False,    "pwd": False})
     return returnvalue
 
@@ -161,9 +155,13 @@ def get_mininginfo(server, errorlist):
 
 def get_operatorlist_txt(filename):
     returnvalue = []
-    with open(filename) as f:
-        for i in f.read().split('\n'):
-            returnvalue.append(i)
+    try:
+        with open(filename) as f:
+            for i in f.read().split('\n'):
+                returnvalue.append(i)
+    except Exception as err:
+        print (err)
+        
     return returnvalue
 
 def add_operator_to_list(file, operator):
@@ -173,3 +171,105 @@ def add_operator_to_list(file, operator):
 
 def zerodivision(n, d):
     return n / d if d else 0
+
+# Problem with defi.conf, there are multiple entrys for masternode_operator possible
+# Solution: https://stackoverflow.com/questions/15848674/how-to-configparse-a-file-keeping-multiple-values-for-identical-keys
+class MultiOrderedDict(OrderedDict):
+    def __setitem__(self, key, value):
+        if key in self:
+            if isinstance(value, list):
+                self[key].extend(value)
+                return
+            elif isinstance(value,str):
+                if len(self[key])>1:
+                    return
+        super(MultiOrderedDict, self).__setitem__(key, value)
+
+def read_config_file(filename):
+    # Problem with defi.conf, there are entrys without [section] -> workaround integrate a section [topsection]
+    # Source: https://stackoverflow.com/questions/2885190/using-configparser-to-read-a-file-without-section-name
+    config_parser = configparser.RawConfigParser(dict_type=MultiOrderedDict, strict=False)
+    with open(filename) as file:
+        config_parser.read_string(re.sub("\n\n*", "\n", "[topsection]\n" + file.read()))
+    return config_parser
+
+def get_credentials_from_config(config, network="main"):
+    if (type(config) == type(configparser.RawConfigParser())):
+        pass
+        # config is already configparser class
+    elif (type(config) == type("c:/tempfile")):
+        # config is string, probably filename -> read config file
+        config = read_config_file(config)
+    else:
+        raise ValueError(f"incopatible input type {type(config)}")
+
+    if network in config:
+        if "rpcuser" in config[network]:
+            rpcuser = config[network]["rpcuser"]
+        elif "rpcuser" in config["topsection"]:
+            rpcuser = config["topsection"]["rpcuser"]
+        else:
+            rpcuser = False
+
+        if "rpcpassword" in config[network]:
+            rpcpass = config[network]["rpcpassword"]
+        elif "rpcpassword" in config["topsection"]:
+            rpcpass = config["topsection"]["rpcpassword"]
+        else:
+            rpcpass = False
+
+        if "rpcbind" in config[network]:
+            rpcbind = config[network]["rpcbind"]
+        elif "rpcbind" in config["topsection"]:
+            rpcbind = config["topsection"]["rpcbind"]
+        else:
+            rpcbind = False
+
+        if "rpcport" in config[network]:
+            rpcport = config[network]["rpcport"]
+        elif "rpcport" in config["topsection"]:
+            rpcport = config["topsection"]["rpcport"]
+        else:
+            rpcport = False
+
+    else:
+        if "rpcuser" in config["topsection"]:
+            rpcuser = config["topsection"]["rpcuser"]
+        elif "rpcuser" in config["main"]:
+            rpcuser = config["main"]["rpcuser"]
+        elif "rpcuser" in config["test"]:
+            rpcuser = config["test"]["rpcuser"]
+        else:
+            rpcuser = False
+
+        if "rpcpassword" in config["topsection"]:
+            rpcpass = config["topsection"]["rpcpassword"]
+        elif "rpcpassword" in config["main"]:
+            rpcpass = config["main"]["rpcpassword"]
+        elif "rpcpassword" in config["test"]:
+            rpcpass = config["test"]["rpcpassword"]
+        else:
+            rpcpass = False
+
+        if "rpcbind" in config["topsection"]:
+            rpcbind = config["topsection"]["rpcbind"]
+        elif "rpcbind" in config["main"]:
+            rpcbind = config["main"]["rpcbind"]
+        elif "rpcbind" in config["test"]:
+            rpcbind = config["test"]["rpcbind"]
+        else:
+            rpcbind = False
+
+        if "rpcport" in config["topsection"]:
+            rpcport = config["topsection"]["rpcport"]
+        elif "rpcport" in config["main"]:
+            rpcport = config["main"]["rpcport"]
+        elif "rpcbind" in config["test"]:
+            rpcport = config["test"]["rpcbind"]
+        else:
+            rpcport = False
+
+    return {"rpcuser": rpcuser,
+            "rpcpass": rpcpass,
+            "rpcbind": rpcbind,
+            "rpcport": rpcport}
