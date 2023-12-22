@@ -1,15 +1,15 @@
-from numpy import append
-import pandas as pd
-from requests import get
+import pandas as pd     #pip install pandas
+from requests import get, post # pip install requests
+from json import dumps
 from os import path, makedirs
 from logging import basicConfig, info, INFO
-from subfunctions import create_connection_rpc, read_deficonf, save_json_to_www, GLOBAL_INDEX_PHP, get_servername, get_serverlist_txt, get_mininginfo, get_operatorlist_txt, add_operator_to_list
-from credentials import DEFICONF, WWW_DIR, TELEGRAM_CHATID_STATUS, TELEGRAM_CHATID_ALARM, TELEGRAM_TOKEN
-
-# hint: pandas not a standard python lib
+from subfunctions import save_json_to_www, GLOBAL_INDEX_PHP, get_servername, get_credentials_from_config
+from subfunctions import get_serverlist_txt, get_mininginfo, get_operatorlist_txt, add_operator_to_list
+from credentials import DEFICONF, WWW_DIR, TELEGRAM_CHATID_STATUS, TELEGRAM_CHATID_ALARM, TELEGRAM_TOKEN, NETWORK
+from datetime import datetime
 
 # variables
-SUBFOLDER = "listmasternodes"
+starttime = datetime.now()
 filename = path.basename(__file__)
 directory = path.dirname(__file__)
 logfile = path.dirname(__file__)+"/"+filename.split(".")[0]+".log"
@@ -18,7 +18,20 @@ logfile = path.dirname(__file__)+"/"+filename.split(".")[0]+".log"
 basicConfig(filename=logfile, format='%(asctime)s - %(message)s', level=INFO)
 info("######################################")
 info(f"Start {filename}")
-#######################################
+
+cred = get_credentials_from_config(DEFICONF, network=NETWORK)
+
+url = f'http://{cred["rpcbind"]}:{cred["rpcport"]}'
+
+def rpc(method, params=[]):
+    payload = dumps({
+        "jsonrpc": "2.0",
+        "id": " mydefichain",
+        "method": method,
+        "params": params
+    })
+    response = post(url, auth=(cred["rpcuser"], cred["rpcpass"]), data=payload).json()['result']
+    return response
 
 #######################################
 # get ip address
@@ -31,12 +44,11 @@ data = [{"masternodes": {"ENABLED": 0, "PRE_ENABLED": 0, "RESIGNED": 0, "PRE_RES
 
 errorlist = []
 try:
-    rpc_connection = create_connection_rpc(read_deficonf(DEFICONF))
-
 # get the current blockheight
-    height = rpc_connection.getblockcount()
+    height = rpc("getblockcount")
 
     operatorlist = get_operatorlist_txt(directory+"/operatorlist.txt")
+    listmasternodes = rpc("listmasternodes", [{"including_start": True}, True])
 
 # get serverlist and check if new operatoraddresses are found, create Online and Offline Serverinformation in data structure
     serverlist = get_serverlist_txt(directory+"/serverlist_mainnet.txt")
@@ -52,12 +64,8 @@ try:
                     operatorlist.append(i["operator"])
                     add_operator_to_list(directory+"/operatorlist.txt", i["operator"])
 
-
     data[2]["server"]["ONLINE"]  = len(serverlist)-len(errorlist)
     data[2]["server"]["OFFLINE"] = len(errorlist)
-
-
-    listmasternodes = rpc_connection.listmasternodes({"including_start": True},True)
 
     temp_operatorlist = []
     for masternode in listmasternodes:
@@ -84,3 +92,8 @@ try:
 except Exception as e:
     print (e)
     get(f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHATID_ALARM}&text=Problems with {filename} on {servername} {ip_address} at block {height}\n {e}')
+
+get(f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHATID_STATUS}&text=Runtime {filename} {servername} {ip_address}: {datetime.now()-starttime} ')
+
+info(f"End {filename} in {datetime.now()-starttime}")
+print(f"End {filename} in {datetime.now()-starttime}")
