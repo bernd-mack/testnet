@@ -1,12 +1,15 @@
 from decimal import *
-from requests import get
-from os import path, makedirs
+from requests import get, post
+from os import path
 from logging import basicConfig, info, INFO
-from subfunctions import create_connection_rpc, read_deficonf, save_json_to_www, GLOBAL_INDEX_PHP, get_servername
-from credentials import DEFICONF, WWW_DIR, TELEGRAM_CHATID_STATUS, TELEGRAM_CHATID_ALARM, TELEGRAM_TOKEN
+from subfunctions import save_json_to_www, GLOBAL_INDEX_PHP, get_servername, get_credentials_from_config
+from credentials import DEFICONF, WWW_DIR, TELEGRAM_CHATID_STATUS, TELEGRAM_CHATID_ALARM, TELEGRAM_TOKEN, NETWORK
+from datetime import datetime
+from json import dumps
 
 # variables
 SUBFOLDER = "vaultaggregation"
+starttime = datetime.now()
 filename = path.basename(__file__)
 directory = path.dirname(__file__)
 logfile = path.dirname(__file__)+"/"+filename.split(".")[0]+".log"
@@ -16,6 +19,20 @@ basicConfig(filename=logfile, format='%(asctime)s - %(message)s', level=INFO)
 info("######################################")
 info(f"Start {filename}")
 
+cred = get_credentials_from_config(DEFICONF, network=NETWORK)
+
+url = f'http://{cred["rpcbind"]}:{cred["rpcport"]}'
+
+def rpc(method, params=[]):
+    payload = dumps({
+        "jsonrpc": "2.0",
+        "id": " mydefichain",
+        "method": method,
+        "params": params
+    })
+    response = post(url, auth=(cred["rpcuser"], cred["rpcpass"]), data=payload).json()['result']
+    return response
+
 # get ip address
 servername, ip_address = get_servername()
 height = "n/a"
@@ -24,16 +41,14 @@ data = [{"state": "active",        "collateralAmounts": {}, "loanAmounts": {}, "
         {"state": "inLiquidation", "collateralAmounts": {}, "loanAmounts": {}}]
 
 try:
-    rpc_connection = create_connection_rpc(read_deficonf(DEFICONF))
-
 # get the current blockheight
-    height = rpc_connection.getblockcount()
+    height = rpc("getblockcount")
 
-    vaultlist = rpc_connection.listvaults({}, {"limit":100000})
+    vaultlist = rpc("listvaults", [{}, {"limit":100000}])
     info(f"Anzahl Vaults: {len(vaultlist)}")
 
     for i in vaultlist:
-        vault = rpc_connection.getvault(i["vaultId"])
+        vault = rpc("getvault", [i["vaultId"]])
         if "state" in vault:
             if vault["state"] == "active":
                 for collaterals in vault["collateralAmounts"]:
@@ -68,16 +83,12 @@ try:
     info (data)
     print (data)
     save_json_to_www(WWW_DIR, "vaultaggregation", data)
-    
-    loandusd = 0
-    if "DUSD" in data[0]["interestAmounts"]:
-        loandusd+=data[0]["interestAmounts"]["DUSD"]
-    if "DUSD" in data[0]["loanAmounts"]:
-        loandusd+=data[0]["loanAmounts"]["DUSD"]
-    if "DUSD" in data[1]["loanAmounts"]:
-        loandusd+=data[1]["loanAmounts"]["DUSD"]
-
 
 except Exception as e:
     print (e)
     get(f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHATID_ALARM}&text=Problems with {filename} on {servername} {ip_address} at block {height}\n {e}')
+
+print("#####")
+
+get(f'https://api.telegram.org/{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHATID_STATUS}&text=Vaultaggregation {servername} {ip_address} at block {height} in {len(vaultlist)} vaults at block {height} in {datetime.now()-starttime}')
+info(f"End {filename} in {datetime.now()-starttime}")
